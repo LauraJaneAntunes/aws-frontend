@@ -1,0 +1,10 @@
+# Comandos para converter chave SSH (execute no seu EC2 ou local)
+
+# Se você tem uma chave OpenSSH, converta para RSA:
+ssh-keygen -p -m PEM -f ~/.ssh/sua_chave.pem
+
+# Ou crie uma nova chave RSA:
+ssh-keygen -t rsa -b 4096 -m PEM -f nova_chave.pem
+
+# Depois adicione a chave pública ao EC2:
+# AWS Console → EC2 → Key Pairs → Actions → Import Key Pair

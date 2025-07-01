@@ -57,3 +57,5 @@ chmod +x setup-ec2.sh
 ## 🌐 Acesso
 
 Após o deploy: `http://SEU_IP_EC2:3000`
+
+<!-- Pipeline configurado e pronto para deploy -->

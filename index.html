@@ -102,7 +102,20 @@
     </div>
 
     <script>
-        const API_BASE = 'http://18.208.157.34';
+        // Configuração dinâmica da API baseada no ambiente
+        const API_BASE = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001' 
+            : 'http://dsm-lja-home.duckdns.org'; // Backend via DuckDNS
+        
+        console.log('🌐 API Base URL:', API_BASE);
+        
+        // Função para mostrar loading
+        function showLoading(elementId) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = '⏳ Carregando...';
+            el.className = 'result';
+            el.style.display = 'block';
+        }
         
         function showResult(elementId, content, isError = false) {
             const el = document.getElementById(elementId);
@@ -113,6 +126,7 @@
 
         // MongoDB Functions
         async function testMongoDB() {
+            showLoading('userResult');
             try {
                 const response = await fetch(`${API_BASE}/mongodb/testar-conexao`);
                 const data = await response.text();
@@ -131,6 +145,7 @@
                 return;
             }
 
+            showLoading('userResult');
             try {
                 const response = await fetch(`${API_BASE}/usuarios`, {
                     method: 'POST',
@@ -153,6 +168,7 @@
         }
 
         async function loadUsers() {
+            showLoading('userResult');
             try {
                 const response = await fetch(`${API_BASE}/usuarios`);
                 const users = await response.json();
@@ -166,6 +182,7 @@
                 });
                 
                 document.getElementById('userList').innerHTML = html;
+                showResult('userResult', `✅ ${users.length} usuários carregados`);
             } catch (error) {
                 showResult('userResult', `❌ Erro ao carregar usuários: ${error.message}`, true);
             }
@@ -191,6 +208,7 @@
 
         // MySQL Functions
         async function testMySQL() {
+            showLoading('productResult');
             try {
                 const response = await fetch(`${API_BASE}/mysql/testar-conexao`);
                 const data = await response.json();
@@ -210,6 +228,7 @@
                 return;
             }
 
+            showLoading('productResult');
             try {
                 const response = await fetch(`${API_BASE}/produtos`, {
                     method: 'POST',
@@ -233,6 +252,7 @@
         }
 
         async function loadProducts() {
+            showLoading('productResult');
             try {
                 const response = await fetch(`${API_BASE}/produtos`);
                 const products = await response.json();
@@ -247,6 +267,7 @@
                 });
                 
                 document.getElementById('productList').innerHTML = html;
+                showResult('productResult', `✅ ${products.length} produtos carregados`);
             } catch (error) {
                 showResult('productResult', `❌ Erro ao carregar produtos: ${error.message}`, true);
             }
@@ -272,6 +293,7 @@
 
         // S3 Functions
         async function loadBuckets() {
+            showLoading('s3Result');
             try {
                 const response = await fetch(`${API_BASE}/buckets`);
                 const buckets = await response.json();
@@ -293,6 +315,7 @@
             const bucketName = document.getElementById('bucketSelect').value;
             if (!bucketName) return;
             
+            showLoading('s3Result');
             try {
                 const response = await fetch(`${API_BASE}/buckets/${bucketName}`);
                 const files = await response.json();
@@ -320,6 +343,7 @@
                 return;
             }
 
+            showLoading('s3Result');
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
 

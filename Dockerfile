@@ -1,11 +1,11 @@
-# Use nginx para servir arquivos estático
+# Use nginx para servir arquivos estáticos
 FROM nginx:alpine
 
 # Remove a configuração padrão do nginx
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Copia os arquivos HTML, CSS, JS para o diretório do nginx
-COPY . /usr/share/nginx/html
+# Copia os arquivos para o diretório do nginx
+COPY index.html /usr/share/nginx/html/
 
 # Cria uma configuração personalizada do nginx
 RUN echo 'server { \
@@ -24,6 +24,9 @@ RUN echo 'server { \
         add_header Cache-Control "public, immutable"; \
     } \
 }' > /etc/nginx/conf.d/default.conf
+
+# Verificar se a configuração está correta
+RUN nginx -t
 
 # Expõe a porta 80
 EXPOSE 80

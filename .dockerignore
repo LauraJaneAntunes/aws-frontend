@@ -1,0 +1,8 @@
+.git
+.github
+README.md
+.gitignore
+setup-ec2.sh
+ssh-help.txt
+Dockerfile
+.dockerignore

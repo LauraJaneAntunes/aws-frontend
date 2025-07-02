@@ -74,3 +74,16 @@ jobs:
           
           # Verify container is running
           docker ps | grep frontend-container
+          
+          # Show detailed container info
+          docker ps -a
+          docker logs frontend-container --tail 20
+          
+          # Test if service is responding
+          sleep 5
+          curl -I http://localhost:3000 || echo "Service not responding on port 3000"
+          
+          # Debug nginx inside container
+          docker exec frontend-container nginx -t || echo "Nginx config test failed"
+          docker exec frontend-container ps aux || echo "Cannot check processes"
+          docker exec frontend-container ls -la /usr/share/nginx/html/ || echo "Cannot list nginx files"

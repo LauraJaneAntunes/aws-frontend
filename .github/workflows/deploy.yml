@@ -39,6 +39,12 @@ jobs:
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
         platforms: linux/amd64,linux/arm64
 
+    - name: Debug SSH Connection
+      run: |
+        echo "Testing SSH connection..."
+        echo "Host: ${{ secrets.EC2_HOST }}"
+        echo "User: ${{ secrets.EC2_USER }}"
+    
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -46,6 +52,8 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         port: 22
+        timeout: 60s
+        command_timeout: 10m
         script: |
           # Stop and remove existing container if exists
           docker stop frontend-container || true

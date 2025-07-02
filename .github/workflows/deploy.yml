@@ -65,10 +65,10 @@ jobs:
           # Pull latest image
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
           
-          # Run new container
+          # Run new container on port 8080 (nginx EC2 proxies to this port)
           docker run -d \
             --name frontend-container \
-            -p 3000:80 \
+            -p 8080:80 \
             --restart unless-stopped \
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
           
@@ -79,9 +79,9 @@ jobs:
           docker ps -a
           docker logs frontend-container --tail 20
           
-          # Test if service is responding
+          # Test if service is responding on port 8080
           sleep 5
-          curl -I http://localhost:3000 || echo "Service not responding on port 3000"
+          curl -I http://localhost:8080 || echo "Service not responding on port 8080"
           
           # Debug nginx inside container
           docker exec frontend-container nginx -t || echo "Nginx config test failed"

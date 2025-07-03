@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug MySQL - AWS Frontend</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { background: white; margin: 20px 0; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .section h2 { margin-top: 0; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .success { background: #28a745; }
+        .danger { background: #dc3545; }
+        .result { margin: 15px 0; padding: 10px; border-radius: 4px; background: #f8f9fa; border: 1px solid #dee2e6; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .success-result { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .test-item { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug MySQL - Diagnóstico Completo</h1>
+        
+        <div class="section">
+            <h2>📊 Informações do Sistema</h2>
+            <div id="systemInfo" class="result"></div>
+            <button onclick="checkSystemInfo()">Verificar Sistema</button>
+        </div>
+
+        <div class="section">
+            <h2>🌐 Testes de Conectividade</h2>
+            <div class="test-item">
+                <h3>1. Teste de Conexão MySQL</h3>
+                <button onclick="testMySQLConnection()" class="success">Testar Conexão MySQL</button>
+                <div id="mysqlResult" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-item">
+                <h3>2. Teste de Listagem de Produtos</h3>
+                <button onclick="testProductsList()">Listar Produtos</button>
+                <div id="productsResult" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-item">
+                <h3>3. Teste de Criação de Produto</h3>
+                <button onclick="testCreateProduct()">Criar Produto Teste</button>
+                <div id="createResult" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-item">
+                <h3>4. Teste de CORS</h3>
+                <button onclick="testCORS()">Testar CORS</button>
+                <div id="corsResult" class="result" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Testes Avançados</h2>
+            <div class="test-item">
+                <h3>5. Teste de Headers</h3>
+                <button onclick="testHeaders()">Verificar Headers</button>
+                <div id="headersResult" class="result" style="display:none;"></div>
+            </div>
+
+            <div class="test-item">
+                <h3>6. Teste de Resposta Raw</h3>
+                <button onclick="testRawResponse()">Resposta Raw</button>
+                <div id="rawResult" class="result" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📝 Log de Atividades</h2>
+            <button onclick="clearLog()" class="danger">Limpar Log</button>
+            <div id="activityLog" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração da API
+        const API_BASE = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001' 
+            : 'http://dsm-lja-home.duckdns.org';
+        
+        let activityLog = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            activityLog.push({timestamp, message, type});
+            updateLogDisplay();
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function updateLogDisplay() {
+            const logEl = document.getElementById('activityLog');
+            logEl.innerHTML = activityLog.map(entry => 
+                `<div class="${entry.type === 'error' ? 'error' : ''}">[${entry.timestamp}] ${entry.message}</div>`
+            ).join('');
+        }
+
+        function clearLog() {
+            activityLog = [];
+            updateLogDisplay();
+        }
+
+        function showResult(elementId, content, isError = false) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = content;
+            el.className = isError ? 'result error' : 'result success-result';
+            el.style.display = 'block';
+        }
+
+        function showLoading(elementId) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = '⏳ Carregando...';
+            el.className = 'result';
+            el.style.display = 'block';
+        }
+
+        // Função para verificar informações do sistema
+        function checkSystemInfo() {
+            const info = {
+                'User Agent': navigator.userAgent,
+                'Hostname': window.location.hostname,
+                'Protocol': window.location.protocol,
+                'API Base': API_BASE,
+                'Timestamp': new Date().toISOString(),
+                'Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+
+            let html = '<h3>Informações do Sistema:</h3>';
+            for (const [key, value] of Object.entries(info)) {
+                html += `<strong>${key}:</strong> ${value}<br>`;
+            }
+
+            document.getElementById('systemInfo').innerHTML = html;
+            log('Informações do sistema verificadas');
+        }
+
+        // 1. Teste de Conexão MySQL
+        async function testMySQLConnection() {
+            showLoading('mysqlResult');
+            log('Iniciando teste de conexão MySQL...');
+            
+            try {
+                const startTime = performance.now();
+                const response = await fetch(`${API_BASE}/mysql/testar-conexao`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+
+                const data = await response.json();
+                
+                let html = `<h3>Resultado da Conexão MySQL:</h3>
+                           <strong>Status:</strong> ${response.status} ${response.statusText}<br>
+                           <strong>Tempo de Resposta:</strong> ${responseTime}ms<br>
+                           <strong>Headers:</strong><br>`;
+                
+                response.headers.forEach((value, key) => {
+                    html += `&nbsp;&nbsp;${key}: ${value}<br>`;
+                });
+
+                html += `<strong>Dados:</strong><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+                showResult('mysqlResult', html, !response.ok);
+                log(`Teste MySQL concluído: ${response.status} (${responseTime}ms)`, response.ok ? 'info' : 'error');
+
+            } catch (error) {
+                const errorMsg = `❌ Erro na conexão MySQL: ${error.message}`;
+                showResult('mysqlResult', errorMsg, true);
+                log(`Erro MySQL: ${error.message}`, 'error');
+            }
+        }
+
+        // 2. Teste de Listagem de Produtos
+        async function testProductsList() {
+            showLoading('productsResult');
+            log('Testando listagem de produtos...');
+            
+            try {
+                const startTime = performance.now();
+                const response = await fetch(`${API_BASE}/produtos`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+
+                const data = await response.json();
+                
+                let html = `<h3>Lista de Produtos:</h3>
+                           <strong>Status:</strong> ${response.status} ${response.statusText}<br>
+                           <strong>Tempo de Resposta:</strong> ${responseTime}ms<br>
+                           <strong>Quantidade:</strong> ${Array.isArray(data) ? data.length : 'N/A'} produtos<br>
+                           <strong>Dados:</strong><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+                showResult('productsResult', html, !response.ok);
+                log(`Listagem de produtos: ${data.length || 0} itens encontrados (${responseTime}ms)`, response.ok ? 'info' : 'error');
+
+            } catch (error) {
+                const errorMsg = `❌ Erro ao listar produtos: ${error.message}`;
+                showResult('productsResult', errorMsg, true);
+                log(`Erro listagem produtos: ${error.message}`, 'error');
+            }
+        }
+
+        // 3. Teste de Criação de Produto
+        async function testCreateProduct() {
+            showLoading('createResult');
+            log('Testando criação de produto...');
+            
+            const testProduct = {
+                nome: `Produto Teste ${Date.now()}`,
+                descricao: 'Produto criado para teste de diagnóstico',
+                preco: 99.99
+            };
+
+            try {
+                const startTime = performance.now();
+                const response = await fetch(`${API_BASE}/produtos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testProduct)
+                });
+                const endTime = performance.now();
+                const responseTime = Math.round(endTime - startTime);
+
+                const data = await response.json();
+                
+                let html = `<h3>Criação de Produto:</h3>
+                           <strong>Status:</strong> ${response.status} ${response.statusText}<br>
+                           <strong>Tempo de Resposta:</strong> ${responseTime}ms<br>
+                           <strong>Produto Enviado:</strong><br><pre>${JSON.stringify(testProduct, null, 2)}</pre>
+                           <strong>Resposta:</strong><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+                showResult('createResult', html, !response.ok);
+                log(`Criação de produto: ${response.ok ? 'sucesso' : 'falha'} (${responseTime}ms)`, response.ok ? 'info' : 'error');
+
+            } catch (error) {
+                const errorMsg = `❌ Erro ao criar produto: ${error.message}`;
+                showResult('createResult', errorMsg, true);
+                log(`Erro criação produto: ${error.message}`, 'error');
+            }
+        }
+
+        // 4. Teste de CORS
+        async function testCORS() {
+            showLoading('corsResult');
+            log('Testando configuração CORS...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/produtos`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'GET',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+
+                let html = `<h3>Teste CORS:</h3>
+                           <strong>Status:</strong> ${response.status} ${response.statusText}<br>
+                           <strong>Headers CORS:</strong><br>`;
+                
+                const corsHeaders = ['access-control-allow-origin', 'access-control-allow-methods', 'access-control-allow-headers'];
+                corsHeaders.forEach(header => {
+                    const value = response.headers.get(header);
+                    html += `&nbsp;&nbsp;${header}: ${value || 'não definido'}<br>`;
+                });
+
+                showResult('corsResult', html, response.status >= 400);
+                log(`Teste CORS: ${response.status}`, response.status < 400 ? 'info' : 'error');
+
+            } catch (error) {
+                const errorMsg = `❌ Erro no teste CORS: ${error.message}`;
+                showResult('corsResult', errorMsg, true);
+                log(`Erro CORS: ${error.message}`, 'error');
+            }
+        }
+
+        // 5. Teste de Headers
+        async function testHeaders() {
+            showLoading('headersResult');
+            log('Verificando headers da resposta...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/mysql/testar-conexao`);
+                
+                let html = `<h3>Headers da Resposta:</h3>
+                           <strong>Status:</strong> ${response.status} ${response.statusText}<br>
+                           <strong>URL:</strong> ${response.url}<br>
+                           <strong>Redirected:</strong> ${response.redirected}<br>
+                           <strong>Headers:</strong><br>`;
+                
+                for (const [key, value] of response.headers.entries()) {
+                    html += `&nbsp;&nbsp;${key}: ${value}<br>`;
+                }
+
+                showResult('headersResult', html);
+                log('Headers verificados com sucesso');
+
+            } catch (error) {
+                const errorMsg = `❌ Erro ao verificar headers: ${error.message}`;
+                showResult('headersResult', errorMsg, true);
+                log(`Erro headers: ${error.message}`, 'error');
+            }
+        }
+
+        // 6. Teste de Resposta Raw
+        async function testRawResponse() {
+            showLoading('rawResult');
+            log('Obtendo resposta raw...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/produtos`);
+                const text = await response.text();
+                
+                let html = `<h3>Resposta Raw:</h3>
+                           <strong>Status:</strong> ${response.status} ${response.statusText}<br>
+                           <strong>Content-Type:</strong> ${response.headers.get('content-type')}<br>
+                           <strong>Content-Length:</strong> ${response.headers.get('content-length')}<br>
+                           <strong>Texto da Resposta:</strong><br><pre>${text}</pre>`;
+
+                try {
+                    const json = JSON.parse(text);
+                    html += `<strong>JSON Parseado:</strong><br><pre>${JSON.stringify(json, null, 2)}</pre>`;
+                } catch (e) {
+                    html += `<strong>Erro ao parsear JSON:</strong> ${e.message}`;
+                }
+
+                showResult('rawResult', html);
+                log('Resposta raw obtida com sucesso');
+
+            } catch (error) {
+                const errorMsg = `❌ Erro ao obter resposta raw: ${error.message}`;
+                showResult('rawResult', errorMsg, true);
+                log(`Erro resposta raw: ${error.message}`, 'error');
+            }
+        }
+
+        // Executar verificação inicial
+        window.onload = function() {
+            checkSystemInfo();
+            log('Página de diagnóstico carregada');
+        };
+    </script>
+</body>
+</html>

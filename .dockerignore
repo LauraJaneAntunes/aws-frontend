@@ -1,8 +1,31 @@
+# Git e GitHub
 .git
 .github
-README.md
 .gitignore
+
+# Documentação
+README.md
+*.md
+
+# Scripts de setup
 setup-ec2.sh
-ssh-help.txt
+*.sh
+
+# Docker files
 Dockerfile
 .dockerignore
+
+# Debug files
+debug-*.html
+debug-*.js
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo

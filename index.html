@@ -83,7 +83,9 @@
                     <label>Preço:</label>
                     <input id="productPrice" type="number" step="0.01" placeholder="0.00">
                 </div>
-                <button onclick="createProduct()">Criar Produto</button>
+                <input id="productId" type="hidden">
+                <button id="productSubmitBtn" onclick="createProduct()">Criar Produto</button>
+                <button id="productCancelBtn" onclick="cancelEdit()" class="danger" style="display:none;">Cancelar</button>
                 
                 <div id="productResult" class="result" style="display:none;"></div>
                 <div id="productList"></div>
@@ -281,7 +283,7 @@
             showLoading('productResult');
             try {
                 const requestBody = {nome, descricao, preco};
-                console.log('Enviando produto:', requestBody);
+                console.log('Criando produto:', requestBody);
                 
                 const response = await debugFetch(`${API_BASE}/produtos`, {
                     method: 'POST',
@@ -337,6 +339,7 @@
                         html += `<div class="item">
                             <strong>${nome}</strong> - R$ ${preco}<br>
                             <small>${descricao}</small>
+                            <button onclick="editProduct(${id}, '${nome}', '${descricao}', ${preco})" class="success">Editar</button>
                             <button onclick="deleteProduct(${id})" class="danger">Excluir</button>
                         </div>`;
                     });
@@ -377,6 +380,95 @@
             } catch (error) {
                 console.error('Erro ao excluir produto:', error);
                 showResult('productResult', `❌ Erro: ${error.message}`, true);
+            }
+        }
+
+        // Função para editar produto
+        function editProduct(id, nome, descricao, preco) {
+            console.log('Editando produto:', {id, nome, descricao, preco});
+            
+            // Preencher os campos com os dados do produto
+            document.getElementById('productId').value = id;
+            document.getElementById('productName').value = nome;
+            document.getElementById('productDesc').value = descricao;
+            document.getElementById('productPrice').value = preco;
+            
+            // Alterar o botão para modo edição
+            const submitBtn = document.getElementById('productSubmitBtn');
+            const cancelBtn = document.getElementById('productCancelBtn');
+            
+            submitBtn.textContent = 'Atualizar Produto';
+            submitBtn.onclick = updateProduct;
+            cancelBtn.style.display = 'inline-block';
+            
+            // Scroll para o formulário
+            document.getElementById('productName').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('productName').focus();
+            
+            showResult('productResult', `✏️ Editando produto: ${nome}`, false);
+        }
+
+        // Função para cancelar edição
+        function cancelEdit() {
+            // Limpar campos
+            document.getElementById('productId').value = '';
+            document.getElementById('productName').value = '';
+            document.getElementById('productDesc').value = '';
+            document.getElementById('productPrice').value = '';
+            
+            // Voltar para modo criação
+            const submitBtn = document.getElementById('productSubmitBtn');
+            const cancelBtn = document.getElementById('productCancelBtn');
+            
+            submitBtn.textContent = 'Criar Produto';
+            submitBtn.onclick = createProduct;
+            cancelBtn.style.display = 'none';
+            
+            showResult('productResult', '❌ Edição cancelada', false);
+        }
+
+        // Função para atualizar produto
+        async function updateProduct() {
+            const id = document.getElementById('productId').value;
+            const nome = document.getElementById('productName').value;
+            const descricao = document.getElementById('productDesc').value;
+            const preco = parseFloat(document.getElementById('productPrice').value);
+            
+            if (!nome || !descricao || !preco) {
+                showResult('productResult', '❌ Preencha todos os campos', true);
+                return;
+            }
+
+            showLoading('productResult');
+            try {
+                const requestBody = {nome, descricao, preco};
+                console.log('Atualizando produto:', {id, ...requestBody});
+                
+                const response = await debugFetch(`${API_BASE}/produtos/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Produto atualizado:', data);
+                
+                const produtoNome = data.nome || data.Nome || 'Produto';
+                showResult('productResult', `✅ Produto atualizado: ${produtoNome}`);
+                
+                // Voltar para modo criação
+                cancelEdit();
+                
+                // Recarregar lista
+                loadProducts();
+            } catch (error) {
+                console.error('Erro ao atualizar produto:', error);
+                showResult('productResult', `❌ Erro ao atualizar: ${error.message}`, true);
             }
         }
 

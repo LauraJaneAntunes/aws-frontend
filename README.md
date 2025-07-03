@@ -4,12 +4,13 @@ Frontend para gerenciamento de APIs MongoDB, MySQL e S3 da AWS.
 
 ## 🚀 Features
 
-- ✅ CRUD de usuários (MongoDB)
-- ✅ CRUD de produtos (MySQL) 
+- ✅ CRUD completo de usuários (MongoDB)
+- ✅ CRUD completo de produtos (MySQL) com edição
 - ✅ Upload/Download de arquivos S3
-- ✅ Interface responsiva
+- ✅ Interface responsiva com sistema de debug
 - ✅ Deploy automatizado com GitHub Actions
 - ✅ Containerização com Docker
+- ✅ Sistema de diagnóstico integrado
 
 ## 🛠️ Tecnologias
 
@@ -18,6 +19,19 @@ Frontend para gerenciamento de APIs MongoDB, MySQL e S3 da AWS.
 - **Banco de dados:** MongoDB, MySQL
 - **Storage:** AWS S3
 - **Deploy:** Docker + GitHub Actions + EC2
+
+## 📁 Estrutura do Projeto
+
+```
+aws-frontend/
+├── index.html          # Interface principal
+├── Dockerfile          # Configuração do container
+├── README.md          # Documentação
+├── setup-ec2.sh       # Script de configuração EC2
+├── .github/workflows/ # Pipeline CI/CD
+├── .dockerignore      # Arquivos ignorados no Docker
+└── .gitignore         # Arquivos ignorados no Git
+```
 
 ## 📦 Deploy
 

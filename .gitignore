@@ -28,3 +28,23 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Debug files
+debug-*.html
+debug-*.js
+debug-*.md
+
+# Temporary scripts
+*-fix.sh
+*-temp.sh
+diagnose.sh
+
+# Documentation temporária
+UPDATE-*.md
+ssh-help.txt
+TEMP-*.md
+
+# Backup files
+*.backup
+*.bak
+*~

@@ -30,16 +30,6 @@
     <div class="container">
         <h1>🚀 Frontend API - MongoDB, MySQL & S3</h1>
         
-        <!-- Status Section -->
-        <div class="section">
-            <h2>📊 Status do Sistema</h2>
-            <div class="form-group">
-                <button onclick="checkAllConnections()" class="success">Verificar Todas Conexões</button>
-                <button onclick="toggleDebugMode()">Toggle Debug Mode</button>
-            </div>
-            <div id="systemStatus" class="result" style="display:none;"></div>
-        </div>
-
         <div class="grid">
             <!-- MongoDB CRUD -->
             <div class="section">
@@ -83,9 +73,7 @@
                     <label>Preço:</label>
                     <input id="productPrice" type="number" step="0.01" placeholder="0.00">
                 </div>
-                <input id="productId" type="hidden">
-                <button id="productSubmitBtn" onclick="createProduct()">Criar Produto</button>
-                <button id="productCancelBtn" onclick="cancelEdit()" class="danger" style="display:none;">Cancelar</button>
+                <button onclick="createProduct()">Criar Produto</button>
                 
                 <div id="productResult" class="result" style="display:none;"></div>
                 <div id="productList"></div>
@@ -116,40 +104,10 @@
     <script>
         // Configuração dinâmica da API baseada no ambiente
         const API_BASE = window.location.hostname === 'localhost' 
-            ? 'http://localhost:3001' 
+            ? 'http://localhost:3000' 
             : 'http://dsm-lja-home.duckdns.org'; // Backend via DuckDNS
         
         console.log('🌐 API Base URL:', API_BASE);
-        console.log('🔍 Hostname:', window.location.hostname);
-        console.log('🔍 Protocol:', window.location.protocol);
-        
-        // Função global para debug de requests
-        async function debugFetch(url, options = {}) {
-            console.log('🚀 Request:', url, options);
-            
-            try {
-                const response = await fetch(url, {
-                    ...options,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        ...options.headers
-                    }
-                });
-                
-                console.log('✅ Response:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    headers: [...response.headers.entries()],
-                    url: response.url
-                });
-                
-                return response;
-            } catch (error) {
-                console.error('❌ Fetch Error:', error);
-                throw error;
-            }
-        }
         
         // Função para mostrar loading
         function showLoading(elementId) {
@@ -252,20 +210,10 @@
         async function testMySQL() {
             showLoading('productResult');
             try {
-                const response = await debugFetch(`${API_BASE}/mysql/testar-conexao`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
+                const response = await fetch(`${API_BASE}/mysql/testar-conexao`);
                 const data = await response.json();
-                
-                // Log detalhado para debug
-                console.log('Resposta MySQL:', data);
-                
-                showResult('productResult', `✅ ${data.status || data.message}`);
+                showResult('productResult', `✅ ${data.message}`);
             } catch (error) {
-                console.error('Erro teste MySQL:', error);
                 showResult('productResult', `❌ Erro: ${error.message}`, true);
             }
         }
@@ -282,75 +230,45 @@
 
             showLoading('productResult');
             try {
-                const requestBody = {nome, descricao, preco};
-                console.log('Criando produto:', requestBody);
-                
-                const response = await debugFetch(`${API_BASE}/produtos`, {
+                const response = await fetch(`${API_BASE}/produtos`, {
                     method: 'POST',
-                    body: JSON.stringify(requestBody)
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nome, descricao, preco})
                 });
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Error response:', errorText);
-                    throw new Error(`HTTP ${response.status}: ${errorText}`);
-                }
-                
                 const data = await response.json();
-                console.log('Produto criado:', data);
                 
-                const produtoNome = data.nome || data.Nome || 'Produto';
-                showResult('productResult', `✅ Produto criado: ${produtoNome}`);
-                
-                // Limpar campos
-                document.getElementById('productName').value = '';
-                document.getElementById('productDesc').value = '';
-                document.getElementById('productPrice').value = '';
-                
-                // Recarregar lista
-                loadProducts();
+                if (response.ok) {
+                    showResult('productResult', `✅ Produto criado: ${data.nome}`);
+                    document.getElementById('productName').value = '';
+                    document.getElementById('productDesc').value = '';
+                    document.getElementById('productPrice').value = '';
+                    loadProducts();
+                } else {
+                    showResult('productResult', `❌ ${data.error}`, true);
+                }
             } catch (error) {
-                console.error('Erro ao criar produto:', error);
-                showResult('productResult', `❌ ${error.message}`, true);
+                showResult('productResult', `❌ Erro: ${error.message}`, true);
             }
         }
 
         async function loadProducts() {
             showLoading('productResult');
             try {
-                const response = await debugFetch(`${API_BASE}/produtos`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
+                const response = await fetch(`${API_BASE}/produtos`);
                 const products = await response.json();
                 
                 let html = '<h3>Lista de Produtos:</h3>';
-                
-                if (Array.isArray(products) && products.length > 0) {
-                    products.forEach(product => {
-                        // Suporte para diferentes formatos de resposta (maiúscula ou minúscula)
-                        const id = product.Id || product.id;
-                        const nome = product.Nome || product.nome;
-                        const preco = product.Preco || product.preco;
-                        const descricao = product.Descricao || product.descricao;
-                        
-                        html += `<div class="item">
-                            <strong>${nome}</strong> - R$ ${preco}<br>
-                            <small>${descricao}</small>
-                            <button onclick="editProduct(${id}, '${nome}', '${descricao}', ${preco})" class="success">Editar</button>
-                            <button onclick="deleteProduct(${id})" class="danger">Excluir</button>
-                        </div>`;
-                    });
-                } else {
-                    html += '<p>Nenhum produto encontrado.</p>';
-                }
+                products.forEach(product => {
+                    html += `<div class="item">
+                        <strong>${product.Nome}</strong> - R$ ${product.Preco}<br>
+                        <small>${product.Descricao}</small>
+                        <button onclick="deleteProduct(${product.Id})" class="danger">Excluir</button>
+                    </div>`;
+                });
                 
                 document.getElementById('productList').innerHTML = html;
                 showResult('productResult', `✅ ${products.length} produtos carregados`);
             } catch (error) {
-                console.error('Erro ao carregar produtos:', error);
                 showResult('productResult', `❌ Erro ao carregar produtos: ${error.message}`, true);
             }
         }
@@ -358,117 +276,18 @@
         async function deleteProduct(id) {
             if (!confirm('Confirma exclusão?')) return;
             
-            showLoading('productResult');
             try {
-                console.log('Deletando produto ID:', id);
-                
-                const response = await debugFetch(`${API_BASE}/produtos/${id}`, {
-                    method: 'DELETE'
-                });
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Error response:', errorText);
-                    throw new Error(`HTTP ${response.status}: ${errorText}`);
-                }
-                
+                const response = await fetch(`${API_BASE}/produtos/${id}`, {method: 'DELETE'});
                 const data = await response.json();
-                console.log('Produto deletado:', data);
                 
-                showResult('productResult', '✅ Produto excluído');
-                loadProducts();
+                if (response.ok) {
+                    showResult('productResult', '✅ Produto excluído');
+                    loadProducts();
+                } else {
+                    showResult('productResult', `❌ ${data.error}`, true);
+                }
             } catch (error) {
-                console.error('Erro ao excluir produto:', error);
                 showResult('productResult', `❌ Erro: ${error.message}`, true);
-            }
-        }
-
-        // Função para editar produto
-        function editProduct(id, nome, descricao, preco) {
-            console.log('Editando produto:', {id, nome, descricao, preco});
-            
-            // Preencher os campos com os dados do produto
-            document.getElementById('productId').value = id;
-            document.getElementById('productName').value = nome;
-            document.getElementById('productDesc').value = descricao;
-            document.getElementById('productPrice').value = preco;
-            
-            // Alterar o botão para modo edição
-            const submitBtn = document.getElementById('productSubmitBtn');
-            const cancelBtn = document.getElementById('productCancelBtn');
-            
-            submitBtn.textContent = 'Atualizar Produto';
-            submitBtn.onclick = updateProduct;
-            cancelBtn.style.display = 'inline-block';
-            
-            // Scroll para o formulário
-            document.getElementById('productName').scrollIntoView({ behavior: 'smooth' });
-            document.getElementById('productName').focus();
-            
-            showResult('productResult', `✏️ Editando produto: ${nome}`, false);
-        }
-
-        // Função para cancelar edição
-        function cancelEdit() {
-            // Limpar campos
-            document.getElementById('productId').value = '';
-            document.getElementById('productName').value = '';
-            document.getElementById('productDesc').value = '';
-            document.getElementById('productPrice').value = '';
-            
-            // Voltar para modo criação
-            const submitBtn = document.getElementById('productSubmitBtn');
-            const cancelBtn = document.getElementById('productCancelBtn');
-            
-            submitBtn.textContent = 'Criar Produto';
-            submitBtn.onclick = createProduct;
-            cancelBtn.style.display = 'none';
-            
-            showResult('productResult', '❌ Edição cancelada', false);
-        }
-
-        // Função para atualizar produto
-        async function updateProduct() {
-            const id = document.getElementById('productId').value;
-            const nome = document.getElementById('productName').value;
-            const descricao = document.getElementById('productDesc').value;
-            const preco = parseFloat(document.getElementById('productPrice').value);
-            
-            if (!nome || !descricao || !preco) {
-                showResult('productResult', '❌ Preencha todos os campos', true);
-                return;
-            }
-
-            showLoading('productResult');
-            try {
-                const requestBody = {nome, descricao, preco};
-                console.log('Atualizando produto:', {id, ...requestBody});
-                
-                const response = await debugFetch(`${API_BASE}/produtos/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(requestBody)
-                });
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Error response:', errorText);
-                    throw new Error(`HTTP ${response.status}: ${errorText}`);
-                }
-                
-                const data = await response.json();
-                console.log('Produto atualizado:', data);
-                
-                const produtoNome = data.nome || data.Nome || 'Produto';
-                showResult('productResult', `✅ Produto atualizado: ${produtoNome}`);
-                
-                // Voltar para modo criação
-                cancelEdit();
-                
-                // Recarregar lista
-                loadProducts();
-            } catch (error) {
-                console.error('Erro ao atualizar produto:', error);
-                showResult('productResult', `❌ Erro ao atualizar: ${error.message}`, true);
             }
         }
 
@@ -565,54 +384,6 @@
             } catch (error) {
                 showResult('s3Result', `❌ Erro: ${error.message}`, true);
             }
-        }
-
-        // Modo debug
-        let debugMode = false;
-        
-        function toggleDebugMode() {
-            debugMode = !debugMode;
-            console.log('🔧 Debug mode:', debugMode ? 'ON' : 'OFF');
-            
-            if (debugMode) {
-                document.body.style.border = '3px solid orange';
-                showResult('systemStatus', '🔧 Debug mode ATIVADO - Verifique o console do navegador', false);
-            } else {
-                document.body.style.border = 'none';
-                showResult('systemStatus', '🔧 Debug mode DESATIVADO', false);
-            }
-        }
-        
-        // Função para verificar todas as conexões
-        async function checkAllConnections() {
-            showLoading('systemStatus');
-            
-            const tests = [
-                {name: 'MongoDB', func: testMongoDB},
-                {name: 'MySQL', func: testMySQL},
-                {name: 'S3', func: loadBuckets}
-            ];
-            
-            let results = [];
-            
-            for (const test of tests) {
-                try {
-                    console.log(`🧪 Testando ${test.name}...`);
-                    await test.func();
-                    results.push(`✅ ${test.name}: OK`);
-                } catch (error) {
-                    results.push(`❌ ${test.name}: ${error.message}`);
-                }
-            }
-            
-            const html = `
-                <h3>Resultado dos Testes:</h3>
-                ${results.map(r => `<p>${r}</p>`).join('')}
-                <p><strong>API Base:</strong> ${API_BASE}</p>
-                <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
-            `;
-            
-            showResult('systemStatus', html);
         }
 
         // Carregar dados iniciais
